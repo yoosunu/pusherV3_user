@@ -1,11 +1,15 @@
-// ignore_for_file: camel_case_types, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:pusher_v3/fetch.dart';
+import 'package:intl/intl.dart';
+import 'package:pusher_v3/pages/save.dart';
+import 'package:pusher_v3/sqldbinit.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pusher/sqldbinit.dart';
-import 'save.dart';
+// import 'save.dart';
+import 'package:http/http.dart' as http;
+import 'dart:typed_data';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -13,55 +17,74 @@ class HomePage extends StatefulWidget {
   final String title;
 
   @override
-  State<HomePage> createState() => _sqlDBPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _sqlDBPageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> {
   DatabaseHelper dbHelper = DatabaseHelper();
+  late List<INotification> fetchedData = [];
+  bool isLoading = true;
 
-  late List<dynamic> fetchedData;
-  List<List<dynamic>>? _nestedList;
+  Future<List<INotification>> loadData() async {
+    const String apiUrl = "https://backend.apot.pro/api/v1/notifications/";
 
-  late dynamic codesGet = [];
-  late dynamic tagsGet = [];
-  late dynamic titlesGet = [];
-  late dynamic sourcesGet = [];
-  late dynamic etcsGet = [];
-  late dynamic linksGet = [];
-  late dynamic timeStampGet = ["Loading..."];
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
 
-  Future<void> _loadData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? storedData = prefs.getString('nestedList');
+      if (response.statusCode == 200) {
+        final Uint8List bodyBytes = response.bodyBytes;
+        final String decodedBody = utf8.decode(bodyBytes);
+        final List<dynamic> jsonData = json.decode(decodedBody);
 
-    if (storedData != null) {
+        List<INotification> notifications =
+            jsonData.map((item) => INotification.fromJson(item)).toList();
+
+        notifications.sort((a, b) => b.code.compareTo(a.code));
+        return notifications;
+      } else {
+        throw Exception("Failed to load data: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+      return [];
+    }
+  }
+
+  Future<List<INotification>> loadAndSetData() async {
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final List<INotification> data = await loadData();
       setState(() {
-        _nestedList = json.decode(storedData).cast<List<dynamic>>();
-        codesGet = _nestedList![0];
-        tagsGet = _nestedList![1];
-        titlesGet = _nestedList![2];
-        sourcesGet = _nestedList![3];
-        etcsGet = _nestedList![4];
-        linksGet = _nestedList![5];
-        timeStampGet = _nestedList![6];
+        fetchedData = data;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
       });
     }
+    return fetchedData;
   }
 
   @override
   void initState() {
+    loadAndSetData();
     super.initState();
-    _loadData();
   }
 
   void showPopup(BuildContext context, int index) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final notification = fetchedData[index].created_at;
+        final formattedDate = DateFormat('yyyy-MM-dd').format(notification);
         return AlertDialog(
           key: UniqueKey(),
           title: Text(
-            "${titlesGet[index]}",
+            fetchedData[index].title,
             textAlign: TextAlign.justify,
             style: const TextStyle(
               fontSize: 17,
@@ -86,7 +109,7 @@ class _sqlDBPageState extends State<HomePage> {
                           width: 8,
                         ),
                         Text(
-                          tagsGet[index],
+                          fetchedData[index].tag,
                           style: const TextStyle(
                             fontSize: 17,
                           ),
@@ -105,7 +128,7 @@ class _sqlDBPageState extends State<HomePage> {
                         width: 8,
                       ),
                       Text(
-                        sourcesGet[index],
+                        fetchedData[index].writer,
                         style: const TextStyle(
                           fontSize: 17,
                         ),
@@ -123,7 +146,7 @@ class _sqlDBPageState extends State<HomePage> {
                         width: 8,
                       ),
                       Text(
-                        etcsGet[index],
+                        fetchedData[index].etc,
                         style: const TextStyle(
                           fontSize: 17,
                         ),
@@ -141,7 +164,7 @@ class _sqlDBPageState extends State<HomePage> {
                         width: 8,
                       ),
                       Text(
-                        timeStampGet[index],
+                        formattedDate,
                         style: const TextStyle(
                           fontSize: 17,
                         ),
@@ -156,11 +179,11 @@ class _sqlDBPageState extends State<HomePage> {
                     ),
                     onPressed: () async {
                       final Uri url = Uri.parse(
-                          'https://www.jbnu.ac.kr/web/Board/${linksGet[index]}/detailView.do?pageIndex=1&menu=2377');
+                          'https://www.jbnu.ac.kr/web/Board/${fetchedData[index].link}/detailView.do?pageIndex=1&menu=2377');
                       if (await canLaunchUrl(url)) {
                         await launchUrl(url);
                       } else {
-                        throw 'https://www.jbnu.ac.kr/web/Board/${linksGet[index]}/detailView.do?pageIndex=1&menu=2377';
+                        throw 'https://www.jbnu.ac.kr/web/Board/${fetchedData[index].link}/detailView.do?pageIndex=1&menu=2377';
                       }
                     },
                     child: const Text(
@@ -179,13 +202,15 @@ class _sqlDBPageState extends State<HomePage> {
               ),
               onPressed: () async {
                 await dbHelper.saveNotification({
-                  DatabaseHelper.secondColumnCode: codesGet[index],
-                  DatabaseHelper.secondColumnTag: tagsGet[index],
-                  DatabaseHelper.secondColumnTitle: titlesGet[index],
-                  DatabaseHelper.secondColumnSource: sourcesGet[index],
-                  DatabaseHelper.secondColumnEtc: etcsGet[index],
-                  DatabaseHelper.secondColumnLink: linksGet[index],
-                  DatabaseHelper.secondColumnTimeStamp: timeStampGet[index],
+                  DatabaseHelper.secondColumnCode: fetchedData[index].code,
+                  DatabaseHelper.secondColumnTag: fetchedData[index].tag,
+                  DatabaseHelper.secondColumnTitle: fetchedData[index].title,
+                  DatabaseHelper.secondColumnLink: fetchedData[index].link,
+                  DatabaseHelper.secondColumnWriter: fetchedData[index].writer,
+                  DatabaseHelper.secondColumnEtc: fetchedData[index].etc,
+                  DatabaseHelper.secondColumnCreatedAt:
+                      (fetchedData[index].created_at as DateTime)
+                          .toIso8601String(),
                 });
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -208,107 +233,96 @@ class _sqlDBPageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final formattedDate = fetchedData.isNotEmpty
+        ? DateFormat('MM-dd h:mm a').format(fetchedData[0].created_at)
+        : 'No data available';
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        actions: <Widget>[
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Clear database?'),
-                  action: SnackBarAction(
-                    label: 'CLEAR',
-                    onPressed: () async {
-                      await dbHelper.resetTable();
-                    },
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.delete),
-          ),
-          const Padding(padding: EdgeInsets.all(12))
-        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-              child: SizedBox(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(250, 50),
-                    backgroundColor: Colors.purple[50],
-                  ),
-                  onPressed: () {},
-                  child: Text(
-                    "Updated: ${timeStampGet[0]}",
-                    style: const TextStyle(
-                      fontSize: 22,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                color: Colors.white10,
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                alignment: Alignment.center,
-                child: ListView.builder(
-                  itemCount: codesGet.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return Container(
-                      padding: const EdgeInsets.all(10),
-                      alignment: Alignment.center,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(100, 55),
-                          alignment: Alignment.center,
-                        ),
-                        onPressed: () {
-                          showPopup(context, index);
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '${codesGet[index]}',
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : fetchedData.isEmpty
+              ? const Center(child: Text('No data available'))
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                        child: SizedBox(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(250, 50),
+                              backgroundColor: Colors.purple[50],
+                            ),
+                            onPressed: () {},
+                            child: Text(
+                              formattedDate,
                               style: const TextStyle(
-                                fontSize: 15,
+                                fontSize: 22,
                               ),
                             ),
-                            const Padding(padding: EdgeInsets.all(10)),
-                            Expanded(
-                              child: Text(
-                                '${titlesGet[index]}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    );
-                  },
+                      Expanded(
+                        child: Container(
+                          color: Colors.white10,
+                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                          alignment: Alignment.center,
+                          child: ListView.builder(
+                            itemCount: isLoading ? 1 : fetchedData.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return Container(
+                                padding: const EdgeInsets.all(10),
+                                alignment: Alignment.center,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(100, 55),
+                                    alignment: Alignment.center,
+                                  ),
+                                  onPressed: () {
+                                    showPopup(context, index);
+                                  },
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${fetchedData[index].code}',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      const Padding(
+                                          padding: EdgeInsets.all(10)),
+                                      Expanded(
+                                        child: Text(
+                                          fetchedData[index].title,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => const PusherPage(title: "Saved")),
+                builder: (context) => const SavePage(title: "Saved")),
           );
         },
         tooltip: 'Fetch',

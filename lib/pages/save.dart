@@ -1,20 +1,19 @@
 // ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pusher/sqldbinit.dart';
+import 'package:pusher_v3/sqldbinit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class PusherPage extends StatefulWidget {
-  const PusherPage({super.key, required this.title});
+class SavePage extends StatefulWidget {
+  const SavePage({super.key, required this.title});
 
   final String title;
 
   @override
-  State<PusherPage> createState() => _PusherPageState();
+  State<SavePage> createState() => _PusherPageState();
 }
 
-class _PusherPageState extends State<PusherPage> {
+class _PusherPageState extends State<SavePage> {
   DatabaseHelper dbHelper = DatabaseHelper();
 
   List<Map<String, dynamic>> _storedData = [];
@@ -111,7 +110,7 @@ class _PusherPageState extends State<PusherPage> {
                                           ListTile(
                                             leading: const Icon(Icons.menu),
                                             title: Text(
-                                                '${item[DatabaseHelper.secondColumnTag]} / ${item[DatabaseHelper.secondColumnSource]}'),
+                                                '${item[DatabaseHelper.secondColumnTag]} / ${item[DatabaseHelper.secondColumnWriter]}'),
                                           ),
                                           ListTile(
                                             leading:
@@ -125,11 +124,12 @@ class _PusherPageState extends State<PusherPage> {
                                             title: const Text('Go to site'),
                                             onTap: () async {
                                               Navigator.of(context).pop();
-                                              final Uri url = Uri.parse(
-                                                  'https://www.jbnu.ac.kr/web/Board/${item[DatabaseHelper.secondColumnLink]}/detailView.do?pageIndex=1&menu=2377');
-                                              if (await canLaunchUrl(url)) {
-                                                await launchUrl(url);
-                                              }
+                                              final String rawUrl = item[
+                                                  DatabaseHelper
+                                                      .secondColumnLink];
+                                              rawUrl.trim();
+                                              final Uri url = Uri.parse(rawUrl);
+                                              await launchUrl(url);
                                             },
                                           ),
                                           ListTile(
@@ -188,11 +188,11 @@ class _PusherPageState extends State<PusherPage> {
                                   ),
                                   trailing: ElevatedButton(
                                     onPressed: () async {
-                                      final Uri url = Uri.parse(
-                                          'https://www.jbnu.ac.kr/web/Board/${item[DatabaseHelper.secondColumnLink]}/detailView.do?pageIndex=1&menu=2377');
-                                      if (await canLaunchUrl(url)) {
-                                        await launchUrl(url);
-                                      }
+                                      final String rawUrl =
+                                          item[DatabaseHelper.secondColumnLink];
+                                      rawUrl.trim();
+                                      final Uri url = Uri.parse(rawUrl);
+                                      await launchUrl(url);
                                     },
                                     child: const Text("Go"),
                                   ),
