@@ -43,6 +43,8 @@ android {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+    implementation 'androidx.appcompat:appcompat:1.6.1' // AppCompat 테마
+    implementation 'com.google.android.material:material:1.9.0' // MaterialComponents 테마
 }
 
 flutter {

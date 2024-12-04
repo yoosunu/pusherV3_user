@@ -10,7 +10,8 @@
     <application
         android:label="pusher_v3"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon"
+        android:theme="@style/NormalTheme">
         <service
             android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService"
             android:exported="false">

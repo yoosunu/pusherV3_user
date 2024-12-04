@@ -177,12 +177,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     onPressed: () async {
-                      final Uri url = Uri.parse(
-                          'https://www.jbnu.ac.kr/web/Board/${fetchedData[index].link}/detailView.do?pageIndex=1&menu=2377');
+                      final Uri url = Uri.parse(fetchedData[index].link);
                       if (await canLaunchUrl(url)) {
                         await launchUrl(url);
                       } else {
-                        throw 'https://www.jbnu.ac.kr/web/Board/${fetchedData[index].link}/detailView.do?pageIndex=1&menu=2377';
+                        throw fetchedData[index].link;
                       }
                     },
                     child: const Text(
@@ -233,7 +232,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final formattedDate = fetchedData.isNotEmpty
-        ? DateFormat('MM-dd h:mm a').format(fetchedData[0].created_at)
+        ? DateFormat(' MM-dd / HH:mm a')
+            .format(fetchedData.first.created_at.toLocal())
         : 'No data available';
     return Scaffold(
       appBar: AppBar(
@@ -252,18 +252,30 @@ class _HomePageState extends State<HomePage> {
                         padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                         child: SizedBox(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(250, 50),
-                              backgroundColor: Colors.purple[50],
-                            ),
-                            onPressed: () {},
-                            child: Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                fontSize: 22,
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(250, 50),
+                                backgroundColor: Colors.purple[50],
                               ),
-                            ),
-                          ),
+                              onPressed: () {},
+                              child: SizedBox(
+                                width: 240,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Updated: ',
+                                      style: const TextStyle(fontSize: 20),
+                                    ),
+                                    Text(
+                                      formattedDate,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
                         ),
                       ),
                       Expanded(
