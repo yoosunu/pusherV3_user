@@ -1,95 +1,75 @@
 import 'package:flutter/material.dart';
-// import 'package:sqflite/sqflite.dart';
-import 'pages/home.dart';
-// import 'package:pusher/sqldbinit.dart';
-// import 'package:pusher/fetch.dart';
-// import 'package:workmanager/workmanager.dart';
 import 'dart:convert';
-// import 'package:pusher/notification.dart';
+import 'package:http/http.dart' as http;
+import 'package:workmanager/workmanager.dart';
+import 'pages/home.dart';
+import 'package:pusher_v3/fetch.dart';
+import 'package:pusher_v3/notification.dart';
 
-// @pragma('vm:entry-point')
-// void callbackDispatcher() {
-//   Workmanager().executeTask((task, inputData) async {
-//     var fetchedData = await FetchUtil.fetchData(); // fetching logic
-//     DatabaseHelper dbHelper = DatabaseHelper(); // sqlDB init
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    Future<void> postDataBG() async {
+      final List<String> urls = [
+        'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=1&menu=2377',
+        'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=2&menu=2377',
+        'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=3&menu=2377',
+      ];
 
-//     Future<int> getMaxCode() async {
-//       var db = await dbHelper.database;
-//       var result = await db.rawQuery(
-//           'SELECT MAX(${DatabaseHelper.columnCode}) as maxCode FROM ${DatabaseHelper.tableName}');
-//       int maxCode = Sqflite.firstIntValue(result) ?? 0;
-//       return maxCode;
-//     }
+      final Uri url =
+          Uri.parse('https://backend.apot.pro/api/v1/notifications/');
 
-//     await _saveData(); // shared_preferences for rendering
+      List<INotificationBG> scrappedDataBG = [];
+      final results = await Future.wait(urls.map(fetchInfosBG));
 
-//     var codes = fetchedData[0];
-//     var tags = fetchedData[1];
-//     var titles = fetchedData[2];
-//     var sources = fetchedData[3];
-//     var etcs = fetchedData[4];
-//     var links = fetchedData[5];
-//     var timestamps = fetchedData[6];
+      for (var result in results) {
+        scrappedDataBG.addAll(result);
+      }
+      for (INotificationBG data in scrappedDataBG) {
+        try {
+          final response = await http.post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: json.encode(data.toJson()), // 데이터를 JSON으로 인코딩
+          );
 
-//     int generateUniqueId(int code, String timestamp) {
-//       String combinedString = '$code$timestamp';
-//       return combinedString.hashCode.abs();
-//     }
+          // 응답 상태 코드 확인
+          if (response.statusCode == 201) {
+            await FlutterLocalNotification.showNotification(
+                data.code,
+                data.title,
+                '${data.code} ${data.tag} ${data.writer} ${data.etc}');
+            print('succeed posting ${data.code}');
+          } else {
+            print('Request failed with status: ${response.statusCode}');
+          }
+        } catch (e) {
+          print('Post erorr: $e');
+        }
+      }
+    }
 
-//     int maxCode = await getMaxCode();
+    await postDataBG();
 
-//     for (var i = 0; i < codes.length; i++) {
-//       var code = codes[i];
-//       var tag = tags[i];
-//       var title = titles[i];
-//       var source = sources[i];
-//       var etc = etcs[i];
-//       var link = links[i];
-//       var timestamp = timestamps[i];
-
-//       if (codes[i] > maxCode) {
-//         int uniqueId = generateUniqueId(code, timestamp);
-//         await dbHelper.insertInfo(
-//           {
-//             DatabaseHelper.columnCode: code,
-//             DatabaseHelper.columnTag: tag,
-//             DatabaseHelper.columnTitle: title,
-//             DatabaseHelper.columnSource: source,
-//             DatabaseHelper.columnEtc: etc,
-//             DatabaseHelper.columnLink: link,
-//             DatabaseHelper.columnTimeStamp: timestamp,
-//           },
-//         );
-//         await FlutterLocalNotification.showNotification(
-//             uniqueId, title, '$code $tag $source $etc fetched: $timestamp');
-//       }
-//     }
-
-//     return Future.value(true);
-//   });
-// }
-
-// Future<void> _saveData() async {
-//   var fetchedData = await FetchUtil.fetchData();
-//   SharedPreferences prefs = await SharedPreferences.getInstance();
-//   prefs.clear();
-//   String dataString = json.encode(fetchedData);
-//   await prefs.setString('nestedList', dataString);
-// }
+    return Future.value(true);
+  });
+}
 
 void main() async {
-  // WidgetsFlutterBinding.ensureInitialized();
-  // FlutterLocalNotification.init();
-  // FlutterLocalNotification.requestNotificationPermission();
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterLocalNotification.init();
+  FlutterLocalNotification.requestNotificationPermissionIos();
+  FlutterLocalNotification.requestNotificationPermissionAndroid();
 
-  // // workmanager section
-  // Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-  // Workmanager().registerPeriodicTask(
-  //   "periodicTask",
-  //   "simplePeriodicTask",
-  //   frequency: const Duration(minutes: 15),
-  // );
-
+  // workmanager section
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+  Workmanager().registerPeriodicTask(
+    "periodicTask",
+    "simplePeriodicTask",
+    frequency: const Duration(minutes: 15),
+  );
   runApp(const MyApp());
 }
 

@@ -1,4 +1,3 @@
-import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html;
 
@@ -34,8 +33,48 @@ class INotification {
   }
 }
 
-Future<List<INotification>> fetchInfosBG(String url) async {
-  final List<INotification> fetchedData = [];
+class INotificationBG {
+  final int code;
+  final String tag;
+  final String title;
+  final String link;
+  final String writer;
+  final String etc;
+
+  INotificationBG({
+    required this.code,
+    required this.tag,
+    required this.title,
+    required this.link,
+    required this.writer,
+    required this.etc,
+  });
+
+  factory INotificationBG.fromJson(Map<String, dynamic> json) {
+    return INotificationBG(
+      code: json['code'] ?? 0,
+      tag: json['tag'] ?? '',
+      title: json['title'] ?? '',
+      link: json['link'] ?? '',
+      writer: json['writer'] ?? '',
+      etc: json['etc'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'tag': tag,
+      'title': title,
+      'link': link,
+      'writer': writer,
+      'etc': etc,
+    };
+  }
+}
+
+Future<List<INotificationBG>> fetchInfosBG(String url) async {
+  final List<INotificationBG> fetchedData = [];
 
   try {
     // Fetch HTML content
@@ -78,21 +117,14 @@ Future<List<INotification>> fetchInfosBG(String url) async {
         final etcList = tr.querySelector('.etc-list li');
         final etc = etcList?.text.trim() ?? '';
 
-        // createdAt
-        DateTime? lastFetchTime;
-        lastFetchTime = DateTime.now();
-        final DateTime formattedDate =
-            DateFormat('yyyy-MM-dd').format(lastFetchTime) as DateTime;
-
         fetchedData.add(
-          INotification(
+          INotificationBG(
             code: code,
             tag: tag,
             title: title,
             link: link,
             writer: writer,
             etc: etc,
-            created_at: formattedDate,
           ),
         );
       }
@@ -102,31 +134,5 @@ Future<List<INotification>> fetchInfosBG(String url) async {
   } catch (e) {
     print('Error fetching data: $e');
   }
-
-  print(fetchedData);
   return fetchedData;
 }
-
-
-
-// Future<void> postDataBG() async {
-//   final List<String> urls = [
-//     'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=1&menu=2377',
-//     'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=2&menu=2377',
-//     'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=3&menu=2377',
-//   ];
-
-//   List<Notification> scrappedDataBG = [];
-//   final results = await Future.wait(urls.map(fetchInfosBG));
-
-//   // Combine results from all URLs
-//   for (var result in results) {
-//     scrappedDataBG.addAll(result);
-//   }
-
-//   // Debug: Print scrapped data
-//   for (var data in scrappedDataBG) {
-//     print('Code: ${data.code}, Title: ${data.title}, Link: ${data.link}');
-//   }
-// }
-
