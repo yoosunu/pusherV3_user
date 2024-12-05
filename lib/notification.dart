@@ -8,7 +8,7 @@ class FlutterLocalNotification {
 
   static init() async {
     AndroidInitializationSettings androidInitializationSettings =
-        const AndroidInitializationSettings('mipmap/ic_launcher');
+        const AndroidInitializationSettings('mipmap/launcher_icon');
 
     InitializationSettings initializationSettings = InitializationSettings(
       android: androidInitializationSettings,

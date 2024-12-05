@@ -60,7 +60,6 @@ void callbackDispatcher() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterLocalNotification.init();
-  FlutterLocalNotification.requestNotificationPermissionIos();
   FlutterLocalNotification.requestNotificationPermissionAndroid();
 
   // workmanager section
