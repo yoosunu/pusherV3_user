@@ -1,9 +1,12 @@
 // ignore_for_file: use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:pusher_v3/fetch.dart';
 import 'package:intl/intl.dart';
+import 'package:pusher_v3/notification.dart';
 import 'package:pusher_v3/pages/save.dart';
 import 'package:pusher_v3/sqldbinit.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,6 +26,86 @@ class _HomePageState extends State<HomePage> {
   DatabaseHelper dbHelper = DatabaseHelper();
   late List<INotification> fetchedData = [];
   bool isLoading = true;
+
+  bool isLoadingGet = true; // forBG
+  bool isRunningGet = false; // forBG
+  late DateTime timeStampGet; // forBG
+
+  void _onReceiveTaskData(Object data) {
+    if (data is Map<String, dynamic>) {
+      final dynamic timestampMillis = data["timestampMillis"];
+      final bool isRunning = data["IsRunning"];
+      final bool isLoading = data["IsLoading"];
+      DateTime timestamp =
+          DateTime.fromMillisecondsSinceEpoch(timestampMillis, isUtc: true);
+      setState(() {
+        isRunningGet = isRunning;
+        timeStampGet = timestamp;
+        isLoadingGet = isLoading;
+      });
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    final NotificationPermission notificationPermission =
+        await FlutterForegroundTask.checkNotificationPermission();
+    if (notificationPermission != NotificationPermission.granted) {
+      await FlutterForegroundTask.requestNotificationPermission();
+    }
+
+    if (Platform.isAndroid) {
+      if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
+        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+      }
+
+      // Use this utility only if you provide services that require long-term survival,
+      // such as exact alarm service, healthcare service, or Bluetooth communication.
+      //
+      // This utility requires the "android.permission.SCHEDULE_EXACT_ALARM" permission.
+      // Using this permission may make app distribution difficult due to Google policy.
+      if (!await FlutterForegroundTask.canScheduleExactAlarms) {
+        // When you call this function, will be gone to the settings page.
+        // So you need to explain to the user why set it.
+        await FlutterForegroundTask.openAlarmsAndRemindersSettings();
+      }
+    }
+  }
+
+  void _initService() {
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'foreground_service',
+        channelName: 'Foreground Service Notification',
+        channelDescription:
+            'This notification appears when the foreground service is running.',
+        onlyAlertOnce: true,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: false,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.repeat(
+            1800000), // 10분: 600000, 30분: 1800000,
+        autoRunOnBoot: true,
+        autoRunOnMyPackageReplaced: true,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+  }
+
+  void _stopForegroundTask() {
+    FlutterForegroundTask.stopService();
+  }
+
+  void _restartForegroundTask() {
+    FlutterForegroundTask.restartService();
+  }
+
+  void _minimizeForegroundTask() {
+    FlutterForegroundTask.minimizeApp();
+  }
 
   Future<List<INotification>> loadData() async {
     const String apiUrl = "https://backend.apot.pro/api/v1/notifications/";
@@ -71,7 +154,21 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     loadAndSetData();
+    FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Request permissions and initialize the service.
+      _requestPermissions();
+      _initService();
+    });
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    // Remove a callback to receive data sent from the TaskHandler.
+    FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
+    super.dispose();
   }
 
   void showPopup(BuildContext context, int index) async {
@@ -173,7 +270,7 @@ class _HomePageState extends State<HomePage> {
                   ElevatedButton(
                     style: ButtonStyle(
                       padding: WidgetStateProperty.all<EdgeInsets>(
-                        const EdgeInsets.symmetric(horizontal: 60.0),
+                        const EdgeInsets.symmetric(horizontal: 30.0),
                       ),
                     ),
                     onPressed: () async {
@@ -239,6 +336,27 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        actions: <Widget>[
+          Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 20, 0),
+              child: isRunningGet
+                  ? IconButton(
+                      iconSize: 34,
+                      onPressed: () {
+                        FlutterLocalNotification.showNotification(
+                            1, "test", "test message for debugging");
+                      },
+                      icon: const Icon(Icons.toggle_on_rounded),
+                    )
+                  : IconButton(
+                      iconSize: 34,
+                      onPressed: () {
+                        FlutterLocalNotification.showNotification(
+                            1, "test", "test message for debugging");
+                      },
+                      icon: const Icon(Icons.toggle_off_outlined),
+                    ))
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
