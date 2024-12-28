@@ -172,6 +172,7 @@ Future<void> postDataBG() async {
         // print('succeed posting ${data.code}');
       }
       // if (response.statusCode == 401) {
+      //   print('status 401');
       //   await storage.delete(key: "access_token");
       //   var refreshToken = await storage.read(key: "refresh_token");
       //   const String url = "https://backend.apot.pro/api/v1/users/refresh-at";
