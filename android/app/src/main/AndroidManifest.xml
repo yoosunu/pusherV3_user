@@ -19,7 +19,7 @@
         android:usesCleartextTraffic="true">
         <service
             android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService"
-            android:exported="false">
+            android:exported="true">
         </service>
         <service 
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"

@@ -1,14 +1,16 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:flutter/material.dart';
+// import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// import 'package:pusher_v3/pages/test.dart';
 import 'pages/home.dart';
 import 'package:pusher_v3/fetch.dart';
 import 'package:pusher_v3/notification.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 @pragma('vm:entry-point')
-void startCallback() {
+void startCallback() async {
   FlutterForegroundTask.setTaskHandler(MyTaskHandler());
 }
 
@@ -25,9 +27,9 @@ class MyTaskHandler extends TaskHandler {
 
   // Called based on the eventAction set in ForegroundTaskOptions.
   @override
-  void onRepeatEvent(DateTime timestamp) async {
+  void onRepeatEvent(DateTime timestamp) {
     // Send data to main isolate.
-    final Map<String, dynamic> data = {
+    Map<String, dynamic> data = {
       "timestampMillis": timestamp.millisecondsSinceEpoch,
       "IsRunning": isRunning,
       "IsLoading": isLoading,
@@ -35,7 +37,7 @@ class MyTaskHandler extends TaskHandler {
     FlutterForegroundTask.sendDataToMain(data);
 
     // background posting logic
-    await postDataBG();
+    postDataBG();
   }
 
   // Called when the task is destroyed.
@@ -52,12 +54,12 @@ class MyTaskHandler extends TaskHandler {
     print('onReceiveData: $data');
   }
 
-  void _sendDataToTask() {
-    // Main(UI) -> TaskHandler
-    //
-    // The Map collection can only be sent in json format, such as Map<String, dynamic>.
-    FlutterForegroundTask.sendDataToTask(Object);
-  }
+  // void _sendDataToTask() {
+  //   // Main(UI) -> TaskHandler
+  //   //
+  //   // The Map collection can only be sent in json format, such as Map<String, dynamic>.
+  //   FlutterForegroundTask.sendDataToTask(Object);
+  // }
 
   // Called when the notification button is pressed.
   @override
@@ -100,6 +102,43 @@ Future<ServiceRequestResult> _startService() async {
 }
 
 Future<void> postDataBG() async {
+  // const storage = FlutterSecureStorage();
+  // String? access_token = await storage.read(key: "access_token");
+  // // print('AT: $access_token');
+
+  // if (access_token == null) {
+  //   String? refreshToken = await storage.read(key: "refresh_token");
+  //   // print('RT: $refreshToken');
+  //   if (refreshToken == null) {
+  //     await FlutterLocalNotification.showNotification(
+  //         0, 'RF was fired', "you should re-login");
+  //   }
+  //   await storage.delete(key: "access_token");
+  //   const String url = "https://backend.apot.pro/api/v1/users/refresh-at";
+  //   try {
+  //     var response = await http.post(
+  //       Uri.parse(url),
+  //       body: json.encode({"refresh_token": refreshToken}),
+  //       headers: {"Content-Type": "application/json"},
+  //     );
+  //     if (response.statusCode == 200) {
+  //       var newAcData = json.decode(response.body);
+  //       var newAccessToken = newAcData["access_token"];
+  //       if (newAccessToken != null && newAccessToken.isNotEmpty) {
+  //         await storage.write(key: "access_token", value: newAccessToken);
+  //       }
+  //     }
+  //     if (response.statusCode == 401) {
+  //       await FlutterLocalNotification.showNotification(
+  //           0, 'RF was fired', "you should re-login");
+  //     } else {
+  //       print('status error: refreshing AT with status ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     print("Failed to refresh AT with $e");
+  //   }
+  // }
+
   final List<String> urls = [
     'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=1&menu=2377',
     'https://www.jbnu.ac.kr/web/news/notice/sub01.do?pageIndex=2&menu=2377',
@@ -109,16 +148,18 @@ Future<void> postDataBG() async {
   final Uri url = Uri.parse('https://backend.apot.pro/api/v1/notifications/');
 
   List<INotificationBG> scrappedDataBG = [];
-  final results = await Future.wait(urls.map(fetchInfosBG));
+  var results = await Future.wait(urls.map(fetchInfosBG));
 
   for (var result in results) {
     scrappedDataBG.addAll(result);
   }
+  print(json.encode(scrappedDataBG[0].toJson()));
   for (INotificationBG data in scrappedDataBG) {
     try {
-      final response = await http.post(
+      var response = await http.post(
         url,
         headers: {
+          // 'Jwt': '$access_token',
           'Content-Type': 'application/json',
         },
         body: json.encode(data.toJson()), // 데이터를 JSON으로 인코딩
@@ -128,17 +169,47 @@ Future<void> postDataBG() async {
       if (response.statusCode == 201) {
         await FlutterLocalNotification.showNotification(data.code, data.title,
             '${data.code} ${data.tag} ${data.writer} ${data.etc}');
-        print('succeed posting ${data.code}');
+        // print('succeed posting ${data.code}');
+      }
+      // if (response.statusCode == 401) {
+      //   await storage.delete(key: "access_token");
+      //   var refreshToken = await storage.read(key: "refresh_token");
+      //   const String url = "https://backend.apot.pro/api/v1/users/refresh-at";
+      //   try {
+      //     var response = await http.post(
+      //       Uri.parse(url),
+      //       body: json.encode({"refresh_token": refreshToken}),
+      //       headers: {"Content-Type": "application/json"},
+      //     );
+      //     if (response.statusCode == 200) {
+      //       var newAcData = json.decode(response.body);
+      //       var newAccessToken = newAcData["access_token"];
+      //       if (newAccessToken != null && newAccessToken.isNotEmpty) {
+      //         await storage.write(key: "access_token", value: newAccessToken);
+      //       }
+      //     }
+      //   } catch (e) {
+      //     print("Failed to refresh AT with $e, status: ${response.statusCode}");
+      //   }
+      // }
+      if (response.statusCode == 500) {
+        await FlutterLocalNotification.showNotification(
+            data.code, data.title, 'status 500 | ${data.code}');
+        print('500 error ${data.code} ${response.body}');
       } else {
-        print('Request failed with status: ${response.statusCode}');
+        // await FlutterLocalNotification.showNotification(
+        //     data.code, data.title, 'post Error with ${data.code}');
+        print(
+            'Request failed with status: ${response.statusCode} | ${data.code} | ${response.body}');
       }
     } catch (e) {
-      print('Post erorr: $e');
+      print('Post error: $e');
+      await FlutterLocalNotification.showNotification(2, 'Post error', '$e');
     }
   }
 }
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterLocalNotification.init();
   FlutterLocalNotification.requestNotificationPermissionAndroid();

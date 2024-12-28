@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, non_constant_identifier_names
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -23,6 +23,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  int retryCount = 0;
   DatabaseHelper dbHelper = DatabaseHelper();
   late List<INotification> fetchedData = [];
   bool isLoading = true;
@@ -31,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   bool isRunningGet = false; // forBG
   late DateTime timeStampGet; // forBG
 
-  void _onReceiveTaskData(Object data) {
+  Future<void> _onReceiveTaskData(Object data) async {
     if (data is Map<String, dynamic>) {
       final dynamic timestampMillis = data["timestampMillis"];
       final bool isRunning = data["IsRunning"];
@@ -86,7 +87,7 @@ class _HomePageState extends State<HomePage> {
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.repeat(
-            1800000), // 10분: 600000, 30분: 1800000,
+            60000), // 10분: 600000, 30분: 1800000,
         autoRunOnBoot: true,
         autoRunOnMyPackageReplaced: true,
         allowWakeLock: true,
@@ -95,28 +96,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _stopForegroundTask() {
-    FlutterForegroundTask.stopService();
-  }
+  // void _stopForegroundTask() {
+  //   FlutterForegroundTask.stopService();
+  // }
 
-  void _restartForegroundTask() {
-    FlutterForegroundTask.restartService();
-  }
+  // void _restartForegroundTask() {
+  //   FlutterForegroundTask.restartService();
+  // }
 
-  void _minimizeForegroundTask() {
-    FlutterForegroundTask.minimizeApp();
-  }
+  // void _minimizeForegroundTask() {
+  //   FlutterForegroundTask.minimizeApp();
+  // }
 
   Future<List<INotification>> loadData() async {
     const String apiUrl = "https://backend.apot.pro/api/v1/notifications/";
 
     try {
-      final response = await http.get(Uri.parse(apiUrl));
+      var response = await http.get(Uri.parse(apiUrl));
 
       if (response.statusCode == 200) {
-        final Uint8List bodyBytes = response.bodyBytes;
-        final String decodedBody = utf8.decode(bodyBytes);
-        final List<dynamic> jsonData = json.decode(decodedBody);
+        Uint8List bodyBytes = response.bodyBytes;
+        String decodedBody = utf8.decode(bodyBytes);
+        List<dynamic> jsonData = json.decode(decodedBody);
 
         List<INotification> notifications =
             jsonData.map((item) => INotification.fromJson(item)).toList();
@@ -124,7 +125,8 @@ class _HomePageState extends State<HomePage> {
         notifications.sort((a, b) => b.code.compareTo(a.code));
         return notifications;
       } else {
-        throw Exception("Failed to load data: ${response.statusCode}");
+        throw Exception(
+            "Failed to load data: ${response.statusCode}, ${response.body}");
       }
     } catch (e) {
       print("Error fetching data: $e");
@@ -137,7 +139,7 @@ class _HomePageState extends State<HomePage> {
       isLoading = true;
     });
     try {
-      final List<INotification> data = await loadData();
+      List<INotification>? data = await loadData();
       setState(() {
         fetchedData = data;
       });
@@ -171,7 +173,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void showPopup(BuildContext context, int index) async {
+  void showPopup(BuildContext context, int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -304,8 +306,7 @@ class _HomePageState extends State<HomePage> {
                   DatabaseHelper.secondColumnWriter: fetchedData[index].writer,
                   DatabaseHelper.secondColumnEtc: fetchedData[index].etc,
                   DatabaseHelper.secondColumnCreatedAt:
-                      (fetchedData[index].created_at as DateTime)
-                          .toIso8601String(),
+                      (fetchedData[index].created_at).toIso8601String(),
                 });
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -381,9 +382,9 @@ class _HomePageState extends State<HomePage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'Updated: ',
-                                      style: const TextStyle(fontSize: 20),
+                                      style: TextStyle(fontSize: 20),
                                     ),
                                     Text(
                                       formattedDate,

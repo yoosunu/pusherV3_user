@@ -2,13 +2,13 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html;
 
 class INotification {
-  final int code;
-  final String tag;
-  final String title;
-  final String link;
-  final String writer;
-  final String etc;
-  final DateTime created_at;
+  int code;
+  String tag;
+  String title;
+  String link;
+  String writer;
+  String etc;
+  DateTime created_at;
 
   INotification({
     required this.code,
@@ -34,12 +34,12 @@ class INotification {
 }
 
 class INotificationBG {
-  final int code;
-  final String tag;
-  final String title;
-  final String link;
-  final String writer;
-  final String etc;
+  int code;
+  String tag;
+  String title;
+  String link;
+  String writer;
+  String etc;
 
   INotificationBG({
     required this.code,
@@ -74,48 +74,48 @@ class INotificationBG {
 }
 
 Future<List<INotificationBG>> fetchInfosBG(String url) async {
-  final List<INotificationBG> fetchedData = [];
+  List<INotificationBG> fetchedData = [];
 
   try {
     // Fetch HTML content
-    final response = await http.get(Uri.parse(url));
+    var response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      final document = html.parse(response.body);
+      var document = html.parse(response.body);
 
       // Find rows with class "tr-normal"
-      final trs = document.getElementsByClassName('tr-normal');
+      var trs = document.getElementsByClassName('tr-normal');
       for (var tr in trs) {
         // code
-        final brdNum = tr.querySelector('.brd-num');
-        final codeText = brdNum?.text.trim() ?? '';
-        final code = int.tryParse(codeText) ?? 0;
+        var brdNum = tr.querySelector('.brd-num');
+        var codeText = brdNum?.text.trim() ?? '';
+        var code = int.tryParse(codeText) ?? 0;
 
         // tag
-        final tagType = tr.querySelector('.tag-type-01');
-        final tag = tagType?.text.trim() ?? '';
+        var tagType = tr.querySelector('.tag-type-01');
+        var tag = tagType?.text.trim() ?? '';
 
         // title
-        final titleHtml = tr.querySelector('.title');
-        final title = titleHtml?.text.trim() ?? '';
+        var titleHtml = tr.querySelector('.title');
+        var title = titleHtml?.text.trim() ?? '';
 
         // link
-        final onclickValue = titleHtml?.attributes['onclick'];
+        var onclickValue = titleHtml?.attributes['onclick'];
         String link = '';
         if (onclickValue != null) {
-          final startIndex = onclickValue.indexOf("'") + 1;
-          final endIndex = onclickValue.indexOf("'", startIndex);
-          final extractedValue = onclickValue.substring(startIndex, endIndex);
+          var startIndex = onclickValue.indexOf("'") + 1;
+          var endIndex = onclickValue.indexOf("'", startIndex);
+          var extractedValue = onclickValue.substring(startIndex, endIndex);
           link =
               "https://www.jbnu.ac.kr/web/Board/$extractedValue/detailView.do?pageIndex=1&menu=2377";
         }
 
         // writer
-        final brdWriter = tr.querySelector('.brd-writer');
-        final writer = brdWriter?.text.trim() ?? '';
+        var brdWriter = tr.querySelector('.brd-writer');
+        var writer = brdWriter?.text.trim() ?? '';
 
         // etc
-        final etcList = tr.querySelector('.etc-list li');
-        final etc = etcList?.text.trim() ?? '';
+        var etcList = tr.querySelector('.etc-list li');
+        var etc = etcList?.text.trim() ?? '';
 
         fetchedData.add(
           INotificationBG(
