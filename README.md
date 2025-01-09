@@ -1,4 +1,4 @@
-# pusher_v3
+# pusher_v3_user
 
 A new Flutter project.
 

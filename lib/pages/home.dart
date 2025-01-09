@@ -1,14 +1,16 @@
-// ignore_for_file: use_build_context_synchronously, non_constant_identifier_names
+// ignore_for_file: use_build_context_synchronously, non_constant_identifier_names, avoid_print
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:pusher_v3/fetch.dart';
 import 'package:intl/intl.dart';
-import 'package:pusher_v3/notification.dart';
-import 'package:pusher_v3/pages/save.dart';
-import 'package:pusher_v3/sqldbinit.dart';
+import 'package:pusher_v3_user/fetch.dart';
+// import 'package:pusher_v3_user/notification.dart';
+// import 'package:pusher_v3_user/notification.dart';
+import 'package:pusher_v3_user/pages/save.dart';
+import 'package:pusher_v3_user/sqldbinit.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
@@ -23,7 +25,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int retryCount = 0;
   DatabaseHelper dbHelper = DatabaseHelper();
   late List<INotification> fetchedData = [];
   bool isLoading = true;
@@ -31,6 +32,28 @@ class _HomePageState extends State<HomePage> {
   bool isLoadingGet = true; // forBG
   bool isRunningGet = false; // forBG
   late DateTime timeStampGet; // forBG
+
+  int codeMax = 0;
+  int codeMin = 0;
+
+  Future<void> getCode() async {
+    Database db = await dbHelper.database;
+    List<Map<String, dynamic>> max =
+        await db.rawQuery('SELECT MAX(code) as max_code FROM api');
+    List<Map<String, dynamic>> min =
+        await db.rawQuery('SELECT MIN(code) as min_code FROM api');
+    // print(max);
+    // print(min);
+
+    setState(() {
+      if (max.isNotEmpty && max.first['max_code'] != null) {
+        codeMax = max.first['max_code'];
+      }
+      if (min.isNotEmpty && min.first['min_code'] != null) {
+        codeMin = min.first['min_code'];
+      }
+    });
+  }
 
   Future<void> _onReceiveTaskData(Object data) async {
     if (data is Map<String, dynamic>) {
@@ -53,20 +76,12 @@ class _HomePageState extends State<HomePage> {
     if (notificationPermission != NotificationPermission.granted) {
       await FlutterForegroundTask.requestNotificationPermission();
     }
-
     if (Platform.isAndroid) {
       if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
         await FlutterForegroundTask.requestIgnoreBatteryOptimization();
       }
 
-      // Use this utility only if you provide services that require long-term survival,
-      // such as exact alarm service, healthcare service, or Bluetooth communication.
-      //
-      // This utility requires the "android.permission.SCHEDULE_EXACT_ALARM" permission.
-      // Using this permission may make app distribution difficult due to Google policy.
       if (!await FlutterForegroundTask.canScheduleExactAlarms) {
-        // When you call this function, will be gone to the settings page.
-        // So you need to explain to the user why set it.
         await FlutterForegroundTask.openAlarmsAndRemindersSettings();
       }
     }
@@ -75,10 +90,10 @@ class _HomePageState extends State<HomePage> {
   void _initService() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'foreground_service',
-        channelName: 'Foreground Service Notification',
+        channelId: 'fg_service',
+        channelName: 'Fg Service Notification',
         channelDescription:
-            'This notification appears when the foreground service is running.',
+            'This notification appears when the fg service is running.',
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -87,26 +102,14 @@ class _HomePageState extends State<HomePage> {
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.repeat(
-            1200000), // 10분: 600000, 30분: 1800000,
-        autoRunOnBoot: true,
-        autoRunOnMyPackageReplaced: true,
+            3600000), // 10분: 600000, 30분: 1800000,
+        autoRunOnBoot: false,
+        autoRunOnMyPackageReplaced: false,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
   }
-
-  // void _stopForegroundTask() {
-  //   FlutterForegroundTask.stopService();
-  // }
-
-  // void _restartForegroundTask() {
-  //   FlutterForegroundTask.restartService();
-  // }
-
-  // void _minimizeForegroundTask() {
-  //   FlutterForegroundTask.minimizeApp();
-  // }
 
   Future<List<INotification>> loadData() async {
     const String apiUrl = "https://backend.apot.pro/api/v1/notifications/";
@@ -155,6 +158,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
+    getCode();
     loadAndSetData();
     FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
 
@@ -338,22 +342,64 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: <Widget>[
+          // Padding(
+          //   padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+          //   child: Row(
+          //     children: [
+          //       Padding(
+          //         padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+          //         child: Row(
+          //           children: [
+          //             const Icon(Icons.arrow_upward_outlined),
+          //             Text('$codeMax')
+          //           ],
+          //         ),
+          //       ),
+          //       Padding(
+          //         padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+          //         child: Row(
+          //           children: [
+          //             const Icon(Icons.arrow_downward_outlined),
+          //             Text('$codeMin')
+          //           ],
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           Padding(
               padding: const EdgeInsets.fromLTRB(0, 0, 20, 0),
               child: isRunningGet
                   ? IconButton(
                       iconSize: 34,
                       onPressed: () {
-                        FlutterLocalNotification.showNotification(
-                            1, "test", "test message for debugging");
+                        // FlutterLocalNotification.showNotification(
+                        //     1, "test", "test message for debugging");
+                        // dbHelper.resetApiTable();
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: const Text('App is running.'),
+                          action: SnackBarAction(
+                            label: 'OK',
+                            onPressed: () {},
+                          ),
+                        ));
                       },
                       icon: const Icon(Icons.toggle_on_rounded),
                     )
                   : IconButton(
                       iconSize: 34,
                       onPressed: () {
-                        FlutterLocalNotification.showNotification(
-                            1, "test", "test message for debugging");
+                        // FlutterLocalNotification.showNotification(
+                        //     1, "test", "test message for debugging");
+                        // dbHelper.resetApiTable();
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: const Text(
+                              'App starts working 1 hour after turning on the app. (Icon will be change to toggle_on after 1h.)'),
+                          action: SnackBarAction(
+                            label: 'OK',
+                            onPressed: () {},
+                          ),
+                        ));
                       },
                       icon: const Icon(Icons.toggle_off_outlined),
                     ))

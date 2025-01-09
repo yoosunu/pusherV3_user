@@ -1,8 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:pusher_v3/pages/home.dart';
+import 'package:pusher_v3_user/pages/home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.title});

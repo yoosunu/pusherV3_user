@@ -1,5 +1,7 @@
+// ignore_for_file: non_constant_identifier_names, avoid_print
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' as html;
 
 class INotification {
   int code;
@@ -73,63 +75,31 @@ class INotificationBG {
   }
 }
 
-Future<List<INotificationBG>> fetchInfosBG(String url) async {
+Future<List<INotificationBG>> fetchInfosBG(Uri url) async {
   List<INotificationBG> fetchedData = [];
 
   try {
-    // Fetch HTML content
-    var response = await http.get(Uri.parse(url));
+    var response = await http.get(url);
     if (response.statusCode == 200) {
-      var document = html.parse(response.body);
-
-      // Find rows with class "tr-normal"
-      var trs = document.getElementsByClassName('tr-normal');
-      for (var tr in trs) {
-        // code
-        var brdNum = tr.querySelector('.brd-num');
-        var codeText = brdNum?.text.trim() ?? '';
-        var code = int.tryParse(codeText) ?? 0;
-
-        // tag
-        var tagType = tr.querySelector('.tag-type-01');
-        var tag = tagType?.text.trim() ?? '';
-
-        // title
-        var titleHtml = tr.querySelector('.title');
-        var title = titleHtml?.text.trim() ?? '';
-
-        // link
-        var onclickValue = titleHtml?.attributes['onclick'];
-        String link = '';
-        if (onclickValue != null) {
-          var startIndex = onclickValue.indexOf("'") + 1;
-          var endIndex = onclickValue.indexOf("'", startIndex);
-          var extractedValue = onclickValue.substring(startIndex, endIndex);
-          link =
-              "https://www.jbnu.ac.kr/web/Board/$extractedValue/detailView.do?pageIndex=1&menu=2377";
-        }
-
-        // writer
-        var brdWriter = tr.querySelector('.brd-writer');
-        var writer = brdWriter?.text.trim() ?? '';
-
-        // etc
-        var etcList = tr.querySelector('.etc-list li');
-        var etc = etcList?.text.trim() ?? '';
-
-        fetchedData.add(
-          INotificationBG(
-            code: code,
-            tag: tag,
-            title: title,
-            link: link,
-            writer: writer,
-            etc: etc,
-          ),
-        );
+      Uint8List bodyBytes = response.bodyBytes;
+      String decodedBody = utf8.decode(bodyBytes);
+      List<dynamic> datas = jsonDecode(decodedBody);
+      for (var data in datas) {
+        fetchedData.add(INotificationBG(
+          code: data['code'],
+          tag: data['tag'],
+          title: data['title'],
+          link: data['link'],
+          writer: data['writer'],
+          etc: data['etc'],
+        ));
       }
-    } else {
-      print('Failed to load URL: $url');
+
+      fetchedData.sort((a, b) => b.code.compareTo(a.code));
+
+      if (fetchedData.length > 30) {
+        fetchedData = fetchedData.sublist(0, 30);
+      }
     }
   } catch (e) {
     print('Error fetching data: $e');
