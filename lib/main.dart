@@ -121,6 +121,7 @@ Future<void> postDataBG() async {
         dbHelper.saveCode(data);
       }
     } catch (e) {
+      // add a page that users can choose gonna get the error alarms or not
       await FlutterLocalNotification.showNotification(
           data.code, 'codeMax Error', '$e');
     }
