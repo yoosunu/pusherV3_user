@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/intl.dart';
 import 'package:pusher_v3_user/fetch.dart';
-// import 'package:pusher_v3_user/notification.dart';
-// import 'package:pusher_v3_user/notification.dart';
+import 'package:pusher_v3_user/notification.dart';
 import 'package:pusher_v3_user/pages/save.dart';
 import 'package:pusher_v3_user/sqldbinit.dart';
 import 'package:sqflite/sqflite.dart';
@@ -97,14 +96,14 @@ class _HomePageState extends State<HomePage> {
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
-        showNotification: false,
-        playSound: false,
+        showNotification: true,
+        playSound: true,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.repeat(
-            1200000), // 10분: 600000, 30분: 1800000,
+            1200000), // 10분: 600000, 15분: 900000, 20분:, 1200000, 30분: 1800000,
         autoRunOnBoot: false,
-        autoRunOnMyPackageReplaced: false,
+        autoRunOnMyPackageReplaced: true,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
@@ -373,33 +372,37 @@ class _HomePageState extends State<HomePage> {
                   ? IconButton(
                       iconSize: 34,
                       onPressed: () {
-                        // FlutterLocalNotification.showNotification(
-                        //     1, "test", "test message for debugging");
-                        // dbHelper.resetApiTable();
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: const Text('App is running.'),
-                          action: SnackBarAction(
-                            label: 'OK',
-                            onPressed: () {},
+                        FlutterLocalNotification.showNotification(
+                            1, "test", "test message for debugging");
+                        loadAndSetData();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('App is running.'),
+                            action: SnackBarAction(
+                              label: 'OK',
+                              onPressed: () {},
+                            ),
                           ),
-                        ));
+                        );
                       },
                       icon: const Icon(Icons.toggle_on_rounded),
                     )
                   : IconButton(
                       iconSize: 34,
                       onPressed: () {
-                        // FlutterLocalNotification.showNotification(
-                        //     1, "test", "test message for debugging");
-                        // dbHelper.resetApiTable();
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: const Text(
-                              'App starts working 1 hour after turning on the app. (Icon will be change to toggle_on after 1h.)'),
-                          action: SnackBarAction(
-                            label: 'OK',
-                            onPressed: () {},
+                        FlutterLocalNotification.showNotification(
+                            1, "test", "test message for debugging");
+                        loadAndSetData();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                                'App starts working 20 minutes after turning on the app. (Icon will be change to toggle_on after 20m.)'),
+                            action: SnackBarAction(
+                              label: 'OK',
+                              onPressed: () {},
+                            ),
                           ),
-                        ));
+                        );
                       },
                       icon: const Icon(Icons.toggle_off_outlined),
                     ))
@@ -433,7 +436,7 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       const Text(
                                         'Updated: ',
-                                        style: TextStyle(fontSize: 20),
+                                        style: TextStyle(fontSize: 16),
                                       ),
                                       Text(
                                         formattedDate,

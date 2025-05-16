@@ -41,7 +41,7 @@ class MyTaskHandler extends TaskHandler {
 
   // Called when the task is destroyed.
   @override
-  Future<void> onDestroy(DateTime timestamp) async {
+  Future<void> onDestroy(DateTime timestamp, bool isCancelled) async {
     print('onDestroy');
     isRunning = false;
     isLoading = true;
@@ -80,7 +80,7 @@ Future<ServiceRequestResult> _startService() async {
     return FlutterForegroundTask.restartService();
   } else {
     return FlutterForegroundTask.startService(
-      serviceId: 512,
+      serviceId: 3,
       notificationTitle: 'Pusher_V3_user',
       notificationText: 'PusherV3 is running',
       notificationIcon: NotificationIcon(
@@ -131,9 +131,11 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterLocalNotification.init();
   FlutterLocalNotification.requestNotificationPermissionAndroid();
+  FlutterLocalNotification.requestNotificationPermissionIos();
   FlutterForegroundTask.initCommunicationPort();
 
   _startService();
+  postDataBG();
 
   runApp(const MyApp());
 }
