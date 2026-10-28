@@ -14,6 +14,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
+import 'package:pusher_v3_user/config.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -112,7 +113,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<List<INotification>> loadData() async {
-    const String apiUrl = "https://backend.apot.pro/api/v1/notifications/";
+    const String apiUrl = "$apiBaseUrl/notifications/";
 
     try {
       var response = await http.get(Uri.parse(apiUrl));

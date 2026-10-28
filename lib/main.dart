@@ -7,6 +7,7 @@ import 'package:pusher_v3_user/sqldbinit.dart';
 import 'package:sqflite/sqflite.dart';
 import 'pages/home.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:pusher_v3_user/config.dart';
 
 @pragma('vm:entry-point')
 void startCallback() async {
@@ -108,7 +109,7 @@ Future<void> postDataBG() async {
   }
 
   List<INotificationBG> scrappedDataBG = [];
-  final Uri url = Uri.parse('https://backend.apot.pro/api/v1/notifications/');
+  final Uri url = Uri.parse('$apiBaseUrl/notifications/');
   var results = await fetchInfosBG(url);
   scrappedDataBG.addAll(results);
 
